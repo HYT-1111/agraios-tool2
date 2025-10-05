@@ -62,6 +62,7 @@
       text-shadow: 0 1px 0 #fff, 0 -1px 0 #ccc;
       user-select: none;
       pointer-events: none;
+      transition: opacity 0.2s;
     }
     .color-select {
       display: flex;
@@ -160,11 +161,9 @@
     <button class="reset-btn" id="resetBtn">Reset</button>
   </div>
   <p style="text-align:center;color:#666; font-size:clamp(0.8em, 3vw, 1em);">
-
   </p>
   <script>
     // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-    // 
     const firebaseConfig = {
       apiKey: "AIzaSyBCUYLLarztGQ0qHgsyzs6tyKrb1_uZ3u4",
       authDomain: "destiny2agraios.firebaseapp.com",
@@ -211,7 +210,6 @@
         authArea.appendChild(info);
       }
     }
-
 
     const points = [
       { num: 3, angle: 0 },
@@ -273,6 +271,12 @@
         const labelText = document.createElement('div');
         labelText.className = "point-label-text";
         labelText.textContent = pt.num;
+
+        if (state && state[pt.num]) {
+          labelText.style.opacity = "1";
+        } else {
+          labelText.style.opacity = "0.25";
+        }
 
         labelCircle.appendChild(labelText);
         labelOuter.appendChild(labelCircle);
