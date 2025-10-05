@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Destiny2 Agraios</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #fafaff; margin:0; padding:0; }
+    .circle-container {
+      position: relative;
+      width: 95vw;
+      max-width: 400px;
+      height: 95vw;
+      max-height: 400px;
+      margin: 24px auto 0 auto;
+      background: #eef2f6;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #bbb;
+    }
+    .point {
+      position: absolute;
+      width: 21vw;
+      max-width: 80px;
+      height: 22vw;
+      max-height: 88px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .label-outer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.8vw;
+      max-margin-bottom: 5px;
+    }
+    .point-label-circle {
+      width: 15vw;
+      max-width: 58px;
+      height: 15vw;
+      max-height: 58px;
+      border-radius: 50%;
+      border: 3px solid #222;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #eaeaea;
+      box-sizing: border-box;
+      transition: background 0.2s;
+    }
+    .point-label-text {
+      font-size: 2em;
+      font-weight: bold;
+      color: #111;
+      text-shadow: 0 1px 0 #fff, 0 -1px 0 #ccc;
+      user-select: none;
+      pointer-events: none;
+    }
+    .color-select {
+      display: flex;
+      gap: 1vw;
+      max-gap: 5px;
+    }
+    .color-btn {
+      width: 7vw;
+      max-width: 30px;
+      height: 7vw;
+      max-height: 30px;
+      border-radius: 50%;
+      border: 2px solid #888;
+      outline: none;
+      cursor: pointer;
+      background: #ccc;
+      opacity: 0.6;
+      transition: opacity 0.2s, border 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: none;
+      touch-action: manipulation;
+    }
+    .color-btn.selected {
+      opacity: 1;
+      border: 3px solid #222;
+      box-shadow: 0 0 8px 2px #aaa5;
+      z-index: 2;
+    }
+    .color-btn[data-color="red"]   { background: #f44; }
+    .color-btn[data-color="blue"]  { background: #39f; }
+    .color-btn[data-color="white"] { background: #fff; }
+    .reset-btn {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      background: #fff;
+      border: 2px solid #888;
+      border-radius: 20px;
+      padding: 8px 30px;
+      font-size: 1.1em;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #bbb7;
+      transition: background 0.2s, border 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 60px;
+      min-height: 32px;
+      max-width: 120px;
+    }
+    .reset-btn:hover, .reset-btn:active {
+      background: #f3f3f3;
+      border: 2px solid #222;
+    }
+    .auth-area {
+      text-align: center;
+      margin: 12px 0 0 0;
+    }
+    .auth-btn {
+      font-size: 1.1em;
+      border: 1px solid #888;
+      border-radius: 4px;
+      padding: 5px 16px;
+      background: #fff;
+      cursor: pointer;
+      margin: 0 8px;
+    }
+    .auth-info {
+      font-size: 0.95em;
+      color: #444;
+      margin-top: 6px;
+      display: block;
+    }
+    @media (max-width: 480px) {
+      .point-label-text {
+        font-size: 1.3em;
+      }
+      .reset-btn {
+        font-size: 1em;
+        padding: 6px 16px;
+        min-width: 50px;
+        min-height: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2 style="text-align: center; font-size:clamp(1.1em, 4vw, 2em);">Destiny2 Agraios</h2>
+  <div class="auth-area" id="authArea"></div>
+  <div class="circle-container" id="circle">
+    <button class="reset-btn" id="resetBtn">Reset</button>
+  </div>
+  <p style="text-align:center;color:#666; font-size:clamp(0.8em, 3vw, 1em);">
+
+  </p>
+  <script>
+    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+    // 
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCUYLLarztGQ0qHgsyzs6tyKrb1_uZ3u4",
+      authDomain: "destiny2agraios.firebaseapp.com",
+      databaseURL: "https://destiny2agraios-default-rtdb.firebaseio.com",
+      projectId: "destiny2agraios",
+      storageBucket:  "destiny2agraios.firebasestorage.app",
+      messagingSenderId:  "898760668249",
+      appId: "1:898760668249:web:89f769a45366073ee6ad48"
+    };
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    const authArea = document.getElementById('authArea');
+    function updateAuthUI(user) {
+      authArea.innerHTML = "";
+      if (user) {
+        const logoutBtn = document.createElement('button');
+        logoutBtn.textContent = "ログアウト";
+        logoutBtn.className = "auth-btn";
+        logoutBtn.onclick = () => auth.signOut();
+        authArea.appendChild(logoutBtn);
+
+        const info = document.createElement('span');
+        info.className = "auth-info";
+        info.textContent = "ログイン中";
+        authArea.appendChild(info);
+      } else {
+        const anonBtn = document.createElement('button');
+        anonBtn.textContent = "ログイン";
+        anonBtn.className = "auth-btn";
+        anonBtn.onclick = () => {
+          auth.signInAnonymously().catch(e=>{
+            alert("ログイン失敗: " + e.message);
+          });
+        };
+        authArea.appendChild(anonBtn);
+
+        const info = document.createElement('span');
+        info.className = "auth-info";
+        info.textContent = "※色変更・リセットはログインが必要です";
+        authArea.appendChild(info);
+      }
+    }
+
+
+    const points = [
+      { num: 3, angle: 0 },
+      { num: 4, angle: 60 },
+      { num: 5, angle: 120 },
+      { num: 1, angle: 240 },
+      { num: 2, angle: 300 }
+    ];
+    const colorMap = {
+      red:   { label: "Red",   color: "#f44" },
+      blue:  { label: "Blue",   color: "#39f" },
+      white: { label: "White",   color: "#fff" }
+    };
+    const defaultCircleColor = "#eaeaea";
+    const container = document.getElementById('circle');
+
+    function getLayout() {
+      const containerSize = container.offsetWidth;
+      return {
+        containerSize,
+        radius: containerSize * 0.43,
+        centerX: containerSize / 2,
+        centerY: containerSize / 2
+      };
+    }
+
+    function layoutPoints() {
+      const {containerSize, radius, centerX, centerY} = getLayout();
+      document.querySelectorAll('.point').forEach((div, idx) => {
+        const pt = points[idx];
+        const angleRad = (pt.angle - 90) * Math.PI / 180;
+        const x = centerX + radius * Math.cos(angleRad) - containerSize * 0.10;
+        const y = centerY + radius * Math.sin(angleRad) - containerSize * 0.087;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+      });
+    }
+
+    function renderPoints(state, canEdit) {
+      Array.from(document.querySelectorAll('.point')).forEach(el => el.remove());
+      points.forEach((pt, idx) => {
+        const {containerSize, radius, centerX, centerY} = getLayout();
+        const angleRad = (pt.angle - 90) * Math.PI / 180;
+        const x = centerX + radius * Math.cos(angleRad) - containerSize * 0.10;
+        const y = centerY + radius * Math.sin(angleRad) - containerSize * 0.087;
+
+        const div = document.createElement('div');
+        div.className = "point";
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+
+        const labelOuter = document.createElement('div');
+        labelOuter.className = "label-outer";
+        const labelCircle = document.createElement('div');
+        labelCircle.className = "point-label-circle";
+        const currentColor = state && state[pt.num] ? colorMap[state[pt.num]].color : defaultCircleColor;
+        labelCircle.style.background = currentColor;
+
+        const labelText = document.createElement('div');
+        labelText.className = "point-label-text";
+        labelText.textContent = pt.num;
+
+        labelCircle.appendChild(labelText);
+        labelOuter.appendChild(labelCircle);
+        div.appendChild(labelOuter);
+
+        const colorSel = document.createElement('div');
+        colorSel.className = "color-select";
+        Object.entries(colorMap).forEach(([key, info]) => {
+          const btn = document.createElement('button');
+          btn.type = "button";
+          btn.className = "color-btn";
+          btn.setAttribute('data-color', key);
+          btn.title = info.label;
+          btn.style.background = info.color;
+          if (state && state[pt.num] === key) btn.classList.add('selected');
+          btn.disabled = !canEdit;
+          btn.onclick = () => {
+            if (canEdit) db.ref('points/' + pt.num).set(key);
+          };
+          colorSel.appendChild(btn);
+        });
+
+        div.appendChild(colorSel);
+        container.appendChild(div);
+      });
+      layoutPoints();
+    }
+
+    let currentUser = null;
+    let canEdit = false;
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      updateAuthUI(user);
+      canEdit = !!user;
+      db.ref('points').once('value', snapshot => {
+        renderPoints(snapshot.val(), canEdit);
+      });
+    });
+
+    db.ref('points').on('value', snapshot => {
+      renderPoints(snapshot.val(), canEdit);
+    });
+
+    function resetAll() {
+      if (!canEdit) {
+        alert("リセットにはログインが必要です");
+        return;
+      }
+      const resetData = {};
+      points.forEach(pt => resetData[pt.num] = null);
+      db.ref('points').set(resetData);
+    }
+    document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+    window.addEventListener('resize', layoutPoints);
+
+    db.ref('points').once('value', snap => {
+      if (!snap.exists()) resetAll();
+    });
+  </script>
+</body>
+</html>
