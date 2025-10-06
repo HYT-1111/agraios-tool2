@@ -96,12 +96,7 @@
     .color-btn[data-color="red"]   { background: #f44; }
     .color-btn[data-color="blue"]  { background: #39f; }
     .color-btn[data-color="white"] { background: #fff; }
-    .reset-btn {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 10;
+    .reset-btn, .judge-btn {
       background: #fff;
       border: 2px solid #888;
       border-radius: 20px;
@@ -110,17 +105,39 @@
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 2px 8px #bbb7;
-      transition: background 0.2s, border 0.2s;
+      transition: background 0.2s, border 0.2s, opacity 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       min-width: 60px;
       min-height: 32px;
       max-width: 120px;
+      margin: 0 auto 0 auto;
     }
-    .reset-btn:hover, .reset-btn:active {
+    .reset-btn {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+    .judge-btn {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + 60px);
+      transform: translate(-50%, 0);
+      z-index: 10;
+    }
+    .reset-btn:hover, .reset-btn:active,
+    .judge-btn:hover, .judge-btn:active {
       background: #f3f3f3;
       border: 2px solid #222;
+    }
+    .judge-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      border: 2px dashed #aaa;
+      background: #f5f5f5;
     }
     .auth-area {
       text-align: center;
@@ -145,11 +162,15 @@
       .point-label-text {
         font-size: 1.3em;
       }
-      .reset-btn {
+      .reset-btn, .judge-btn {
         font-size: 1em;
         padding: 6px 16px;
         min-width: 50px;
         min-height: 28px;
+        max-width: 90px;
+      }
+      .judge-btn {
+        top: calc(50% + 38px);
       }
     }
   </style>
@@ -159,11 +180,13 @@
   <div class="auth-area" id="authArea"></div>
   <div class="circle-container" id="circle">
     <button class="reset-btn" id="resetBtn">Reset</button>
+    <button class="judge-btn" id="judgeBtn" disabled>Judge</button>
   </div>
   <p style="text-align:center;color:#666; font-size:clamp(0.8em, 3vw, 1em);">
+
   </p>
   <script>
-    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+
     const firebaseConfig = {
       apiKey: "AIzaSyBCUYLLarztGQ0qHgsyzs6tyKrb1_uZ3u4",
       authDomain: "destiny2agraios.firebaseapp.com",
@@ -173,13 +196,33 @@
       messagingSenderId:  "898760668249",
       appId: "1:898760668249:web:89f769a45366073ee6ad48"
     };
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
 
+
     const authArea = document.getElementById('authArea');
+    const container = document.getElementById('circle');
+    const resetBtn = document.getElementById('resetBtn');
+    const judgeBtn = document.getElementById('judgeBtn');
+
+
+    const points = [
+      { num: 3, angle: 0 },
+      { num: 4, angle: 60 },
+      { num: 5, angle: 120 },
+      { num: 1, angle: 240 },
+      { num: 2, angle: 300 }
+    ];
+    const colorMap = {
+      red:   { label: "Red",   color: "#f44" },
+      blue:  { label: "Blue",   color: "#39f" },
+      white: { label: "White",   color: "#fff" }
+    };
+    const defaultCircleColor = "#eaeaea";
+
+
     function updateAuthUI(user) {
       authArea.innerHTML = "";
       if (user) {
@@ -206,25 +249,77 @@
 
         const info = document.createElement('span');
         info.className = "auth-info";
-        info.textContent = "※操作するにはログインが必要です";
+        info.textContent = "※操作にはログインが必要です";
         authArea.appendChild(info);
       }
     }
 
-    const points = [
-      { num: 3, angle: 0 },
-      { num: 4, angle: 60 },
-      { num: 5, angle: 120 },
-      { num: 1, angle: 240 },
-      { num: 2, angle: 300 }
-    ];
-    const colorMap = {
-      red:   { label: "Red",   color: "#f44" },
-      blue:  { label: "Blue",   color: "#39f" },
-      white: { label: "White",   color: "#fff" }
-    };
-    const defaultCircleColor = "#eaeaea";
-    const container = document.getElementById('circle');
+
+    function getCurrentColorCounts(state) {
+      const counts = { red:0, blue:0, white:0 };
+      points.forEach(pt => {
+        const color = state && state[pt.num] ? state[pt.num] : null;
+        if (color && counts[color] !== undefined) counts[color]++;
+      });
+      return counts;
+    }
+
+
+    function getMaxColorCounts(counts) {
+      const result = { red: 2, blue: 2, white: 2 };
+
+      const numColorsAt2 = Object.values(counts).filter(n => n === 2).length;
+      if (numColorsAt2 === 2) {
+
+        for (const color in result) {
+          if (counts[color] !== 2) result[color] = 1;
+        }
+      }
+      return result;
+    }
+
+    function canSelectColor(color, counts, maxCounts) {
+      return counts[color] < maxCounts[color];
+    }
+
+
+    function updateJudgeBtnState(state) {
+      const counts = getCurrentColorCounts(state);
+      const total = counts.red + counts.blue + counts.white;
+      judgeBtn.disabled = (total < 3);
+    }
+
+
+    function onJudge(state) {
+      const counts = getCurrentColorCounts(state);
+      const total = counts.red + counts.blue + counts.white;
+      if (total < 3) return;
+      const remainPoints = points.filter(pt => !state[pt.num]);
+
+
+      const twos = Object.keys(counts).filter(color => counts[color] === 2);
+      if (twos.length === 2 && remainPoints.length > 0) {
+        const oneColor = ["red", "blue", "white"].find(color => !twos.includes(color));
+        const updates = {};
+        remainPoints.forEach(pt => { updates[pt.num] = oneColor; });
+        db.ref('points').update(updates);
+        return;
+      }
+
+
+      const twoColors = Object.keys(counts).filter(color => counts[color] === 2);
+      const oneColors = Object.keys(counts).filter(color => counts[color] === 1);
+      const zeroColors = Object.keys(counts).filter(color => counts[color] === 0);
+      if (twoColors.length === 1 && oneColors.length === 1 && zeroColors.length === 1 && remainPoints.length === 2) {
+        const zeroColor = zeroColors[0];
+        const updates = {};
+        remainPoints.forEach(pt => { updates[pt.num] = zeroColor; });
+        db.ref('points').update(updates);
+        return;
+      }
+
+    }
+
 
     function getLayout() {
       const containerSize = container.offsetWidth;
@@ -250,6 +345,8 @@
 
     function renderPoints(state, canEdit) {
       Array.from(document.querySelectorAll('.point')).forEach(el => el.remove());
+      const counts = getCurrentColorCounts(state);
+      const maxCounts = getMaxColorCounts(counts);
       points.forEach((pt, idx) => {
         const {containerSize, radius, centerX, centerY} = getLayout();
         const angleRad = (pt.angle - 90) * Math.PI / 180;
@@ -271,13 +368,11 @@
         const labelText = document.createElement('div');
         labelText.className = "point-label-text";
         labelText.textContent = pt.num;
-
         if (state && state[pt.num]) {
           labelText.style.opacity = "1";
         } else {
           labelText.style.opacity = "0.25";
         }
-
         labelCircle.appendChild(labelText);
         labelOuter.appendChild(labelCircle);
         div.appendChild(labelOuter);
@@ -292,9 +387,11 @@
           btn.title = info.label;
           btn.style.background = info.color;
           if (state && state[pt.num] === key) btn.classList.add('selected');
-          btn.disabled = !canEdit;
+          btn.disabled = !canEdit || (state && state[pt.num]) || !canSelectColor(key, counts, maxCounts);
           btn.onclick = () => {
-            if (canEdit) db.ref('points/' + pt.num).set(key);
+            if (canEdit && (!state || !state[pt.num]) && canSelectColor(key, counts, maxCounts)) {
+              db.ref('points/' + pt.num).set(key);
+            }
           };
           colorSel.appendChild(btn);
         });
@@ -305,6 +402,7 @@
       layoutPoints();
     }
 
+
     let currentUser = null;
     let canEdit = false;
     auth.onAuthStateChanged(user => {
@@ -313,12 +411,15 @@
       canEdit = !!user;
       db.ref('points').once('value', snapshot => {
         renderPoints(snapshot.val(), canEdit);
+        updateJudgeBtnState(snapshot.val());
       });
     });
 
     db.ref('points').on('value', snapshot => {
       renderPoints(snapshot.val(), canEdit);
+      updateJudgeBtnState(snapshot.val());
     });
+
 
     function resetAll() {
       if (!canEdit) {
@@ -329,9 +430,17 @@
       points.forEach(pt => resetData[pt.num] = null);
       db.ref('points').set(resetData);
     }
-    document.getElementById('resetBtn').addEventListener('click', resetAll);
+    resetBtn.addEventListener('click', resetAll);
+
+
+    judgeBtn.addEventListener('click', function() {
+      db.ref('points').once('value').then(snapshot => {
+        onJudge(snapshot.val());
+      });
+    });
 
     window.addEventListener('resize', layoutPoints);
+
 
     db.ref('points').once('value', snap => {
       if (!snap.exists()) resetAll();
