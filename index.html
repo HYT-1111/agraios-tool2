@@ -207,7 +207,7 @@
     const resetBtn = document.getElementById('resetBtn');
     const judgeBtn = document.getElementById('judgeBtn');
 
-
+ 
     const points = [
       { num: 3, angle: 0 },
       { num: 4, angle: 60 },
@@ -249,12 +249,12 @@
 
         const info = document.createElement('span');
         info.className = "auth-info";
-        info.textContent = "※操作にはログインが必要です";
+        info.textContent = "※操作はログインが必要です";
         authArea.appendChild(info);
       }
     }
 
-
+ 
     function getCurrentColorCounts(state) {
       const counts = { red:0, blue:0, white:0 };
       points.forEach(pt => {
@@ -387,9 +387,10 @@
           btn.title = info.label;
           btn.style.background = info.color;
           if (state && state[pt.num] === key) btn.classList.add('selected');
-          btn.disabled = !canEdit || (state && state[pt.num]) || !canSelectColor(key, counts, maxCounts);
+          // 押し直し有効: 既に選択済みでもdisabledにしない
+          btn.disabled = !canEdit || !canSelectColor(key, counts, maxCounts);
           btn.onclick = () => {
-            if (canEdit && (!state || !state[pt.num]) && canSelectColor(key, counts, maxCounts)) {
+            if (canEdit && canSelectColor(key, counts, maxCounts)) {
               db.ref('points/' + pt.num).set(key);
             }
           };
